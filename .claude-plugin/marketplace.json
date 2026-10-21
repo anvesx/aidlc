@@ -1,0 +1,12 @@
+{
+  "name": "devx-aidlc",
+  "owner": { "name": "devx labs" },
+  "description": "devx's AI-driven development lifecycle",
+  "plugins": [
+    {
+      "name": "aidlc",
+      "source": "./plugin/aidlc",
+      "description": "AIDLC, devx's AI-driven development lifecycle."
+    }
+  ]
+}

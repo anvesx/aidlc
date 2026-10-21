@@ -1,0 +1,6 @@
+{
+  "name": "aidlc",
+  "version": "0.1.0",
+  "description": "AIDLC: devx's AI-driven development lifecycle. One loop (Clarify, Plan, Build, Check, Record) at two levels. The AI does the work; people make the decisions.",
+  "author": { "name": "Aditya Pasikanti" }
+}

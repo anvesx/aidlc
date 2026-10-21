@@ -1,0 +1,10 @@
+# Mac system files
+.DS_Store
+__MACOSX/
+
+# Built plugin zips (make a fresh one for each Cowork upload)
+*.zip
+
+# Python
+__pycache__/
+.pytest_cache/

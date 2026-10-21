@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIDLC</title>
+<link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%23364fc7'/><path d='M10 21l6-11 6 11' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --surface-2:#fafbfc; --line:#e7e9ee; --line-2:#eef0f4;
+  --ink:#1b1f29; --ink-2:#4a5263; --ink-3:#7c8496; --ink-4:#a8afbd;
+  --accent:#3b5bdb; --accent-soft:#eef2ff; --accent-ink:#2f4ac0;
+  --run:#3b5bdb; --run-soft:#edf1ff;
+  --wait:#c27c0e; --wait-soft:#fff7e8; --wait-line:#f6dfb3;
+  --done:#2b8a5e; --done-soft:#ebf7f1;
+  --stale:#7b6bb5; --stale-soft:#f3f0fb;
+  --stop:#c4423a; --stop-soft:#fdeeed;
+  --shadow-1:0 1px 2px rgba(20,27,45,.04),0 1px 1px rgba(20,27,45,.03);
+  --shadow-2:0 1px 2px rgba(20,27,45,.04),0 8px 24px -8px rgba(20,27,45,.10);
+  --shadow-3:0 2px 4px rgba(20,27,45,.04),0 18px 40px -12px rgba(20,27,45,.18);
+  --r-lg:16px; --r-md:12px; --r-sm:8px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.55}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+button{font:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 28px 64px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink-3);font-weight:600;letter-spacing:.02em;font-size:12.5px;text-transform:uppercase}
+.brand .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(140deg,#4263eb,#364fc7);display:grid;place-items:center;box-shadow:0 4px 12px -4px rgba(54,79,199,.6)}
+.brand .mark svg{width:15px;height:15px}
+.state-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);font-size:12.5px;font-weight:550;color:var(--ink-2);transition:all .4s var(--ease)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-4);position:relative;flex:none}
+.dot.run{background:var(--run)} .dot.wait{background:var(--wait)} .dot.done{background:var(--done)} .dot.stop{background:var(--stop)}
+.dot.run::after,.dot.wait::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:ping 1.8s var(--ease) infinite}
+.dot.run{color:var(--run)} .dot.wait{color:var(--wait)}
+@keyframes ping{0%{transform:scale(.5);opacity:.55}100%{transform:scale(1.6);opacity:0}}
+
+/* hero */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-2);padding:24px 26px;margin-bottom:18px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,#4263eb,#748ffc 40%,#a5b4fc);opacity:.85}
+.hero h1{margin:0 0 6px;font-size:22px;font-weight:650;letter-spacing:-.01em}
+.hero .req{color:var(--ink-2);max-width:900px;margin:0 0 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--ink-2);font-size:12.5px}
+.chip b{color:var(--ink);font-weight:600}
+.chip code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;color:var(--ink)}
+
+/* banners */
+.banner{display:flex;gap:14px;align-items:flex-start;border-radius:var(--r-md);padding:14px 16px;margin-bottom:18px;border:1px solid;animation:rise .5s var(--ease) both}
+.banner.done{background:var(--done-soft);border-color:#cfeadc;color:#1f6b48}
+.banner.stop{background:var(--stop-soft);border-color:#f5cfcb;color:#9b2f28}
+.banner.lost{background:#f4f5f8;border-color:var(--line);color:var(--ink-2)}
+.banner .t{font-weight:650;margin-bottom:2px}
+.banner>div:first-child{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:rgba(255,255,255,.7);font-weight:700}
+.banner svg{width:14px;height:14px}
+
+/* needs you */
+.needs{background:linear-gradient(180deg,#fffaf0,#fff);border:1px solid var(--wait-line);border-radius:var(--r-lg);box-shadow:0 0 0 4px rgba(246,223,179,.35),var(--shadow-3);padding:22px 24px;margin-bottom:22px;animation:rise .6s var(--ease) both}
+.needs .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.needs .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--wait);font-weight:650;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.needs h2{margin:4px 0 0;font-size:18px;font-weight:650}
+.needs .sub{color:var(--ink-2);margin:2px 0 0}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;margin:0 0 14px;color:var(--ink-2)}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;transition:border-color .2s,box-shadow .2s}
+.q:focus-within{border-color:#c5d0fa;box-shadow:0 0 0 4px var(--accent-soft)}
+.q .qn{display:flex;gap:10px;align-items:baseline}
+.q .num{flex:none;width:22px;height:22px;border-radius:7px;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:650;display:grid;place-items:center}
+.q .qt{font-weight:600}
+.q .opt{color:var(--ink-2);margin:6px 0 10px 32px;font-size:13.5px}
+.q .opt .sugg{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-2);font-size:12.5px}
+textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font:inherit;color:var(--ink);background:var(--surface-2);transition:border-color .2s,background .2s,box-shadow .2s;outline:none}
+textarea:focus{border-color:#a9b8f5;background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+.q textarea{margin-left:32px;width:calc(100% - 32px)}
+.actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;border-radius:10px;font-weight:600;cursor:pointer;transition:transform .15s var(--ease),box-shadow .2s,background .2s,border-color .2s;box-shadow:var(--shadow-1)}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-2)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:linear-gradient(180deg,#4263eb,#3b5bdb);color:#fff;border-color:#3451c9;box-shadow:0 6px 16px -6px rgba(59,91,219,.6)}
+.btn.good{background:linear-gradient(180deg,#2f9666,#2b8a5e);color:#fff;border-color:#277c55;box-shadow:0 6px 16px -6px rgba(43,138,94,.55)}
+.btn.ghost{background:transparent;box-shadow:none}
+.btn[disabled]{opacity:.55;cursor:default;transform:none}
+.reason{margin-top:12px;display:none;animation:rise .35s var(--ease) both}
+.reason.open{display:block}
+details.doc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden}
+details.doc summary{cursor:pointer;padding:12px 14px;font-weight:600;color:var(--ink-2);list-style:none;display:flex;justify-content:space-between}
+details.doc summary::after{content:"Show";color:var(--accent);font-weight:550}
+details.doc[open] summary::after{content:"Hide"}
+details.doc .md{padding:4px 18px 16px;border-top:1px solid var(--line-2);max-height:520px;overflow:auto}
+
+/* steps */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-2);padding:20px 22px;margin-bottom:18px}
+.card h3{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:650;display:flex;justify-content:space-between;align-items:center}
+.card h3 .aside{text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-3);font-size:12.5px}
+.stepper{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:0;position:relative}
+.step{position:relative;padding:0 6px;cursor:pointer;text-align:center}
+.step .bar{position:absolute;top:17px;left:calc(-50% + 22px);right:calc(50% + 22px);height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.step .bar i{position:absolute;inset:0;background:var(--done);transform-origin:left;transform:scaleX(0);transition:transform .8s var(--ease)}
+.step.done .bar i,.step.after-done .bar i{transform:scaleX(1)}
+.step:first-child .bar{display:none}
+.node{width:36px;height:36px;margin:0 auto 10px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-4);position:relative;transition:all .5s var(--ease);font-weight:650;font-size:13px}
+.step:hover .node{transform:translateY(-2px);box-shadow:var(--shadow-2)}
+.step.sel .node{box-shadow:0 0 0 4px var(--accent-soft)}
+.node svg{width:17px;height:17px}
+.st-Done .node{background:var(--done-soft);border-color:#cde9da;color:var(--done)}
+.st-Running .node{background:var(--run-soft);border-color:#ccd6fb;color:var(--run)}
+.st-Running .node::after{content:"";position:absolute;inset:-5px;border-radius:15px;border:2px solid var(--run);border-color:var(--run) transparent transparent transparent;animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.st-wait .node{background:var(--wait-soft);border-color:var(--wait-line);color:var(--wait);animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 6px rgba(246,223,179,.45)}}
+.st-Stale .node{background:var(--stale-soft);border-color:#ddd5f3;color:var(--stale)}
+.st-Approved .node{background:var(--done-soft);border-color:#cde9da;color:var(--done)}
+.step .lbl{font-weight:600;font-size:13.5px}
+.step .sts{font-size:12px;color:var(--ink-3);margin-top:1px}
+.st-wait .sts{color:var(--wait);font-weight:600} .st-Running .sts{color:var(--run);font-weight:600} .st-Done .sts{color:var(--done)}
+
+/* project modules */
+.mods{display:grid;gap:14px}
+.mod{border:1px solid var(--line-2);border-radius:var(--r-md);padding:14px 16px;background:var(--surface-2)}
+.mod .mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.mod .mt{font-weight:650}
+.phase{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px dashed var(--line)}
+.phase:first-of-type{border-top:0}
+.phase .pt{width:150px;flex:none;color:var(--ink-3);font-size:12.5px;font-weight:600}
+.unit{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--line);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .2s var(--ease)}
+.unit:hover{border-color:#c9d3f7;transform:translateY(-1px)}
+.pips{display:inline-flex;gap:3px}
+.pip{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.pip.Done{background:var(--done)} .pip.Running{background:var(--run);animation:blink 1s ease-in-out infinite} .pip.wait{background:var(--wait)} .pip.Stale{background:var(--stale)}
+@keyframes blink{50%{opacity:.35}}
+.mini{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+
+/* grid below */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+@media (max-width:980px){.cols{grid-template-columns:1fr}}
+
+/* activity */
+.feed{max-height:560px;overflow:auto;margin:-4px -6px 0 -6px;padding:4px 6px}
+.ev{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;padding:8px 6px;animation:rise .45s var(--ease) both}
+.ev+.ev{border-top:1px solid var(--line-2)}
+.ev .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line-2);color:var(--ink-3)}
+.ev .ic svg{width:12px;height:12px}
+.ev.k-tool .ic{background:var(--accent-soft);border-color:#dbe3ff;color:var(--accent)}
+.ev.k-sub{padding-left:22px} .ev.k-sub .ic{background:#f6f3ff;border-color:#e9e2ff;color:var(--stale)}
+.ev.k-note .tx{color:var(--ink-2);font-style:italic}
+.ev.k-result .ic{background:var(--done-soft);border-color:#d5eee1;color:var(--done)}
+.ev.k-you .ic{background:var(--wait-soft);border-color:var(--wait-line);color:var(--wait)}
+.ev.k-driver .tx{color:var(--ink-2)}
+.ev .tx{font-size:13.2px;word-break:break-word}
+.ev .tg{font-size:11px;color:var(--ink-4);white-space:nowrap;padding-top:2px}
+.ev .who{font-size:11px;color:var(--stale);font-weight:600;margin-right:6px}
+.empty{color:var(--ink-3);text-align:center;padding:30px 0}
+
+/* output viewer */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 12px}
+.tab{padding:6px 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .2s var(--ease)}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--accent-soft);border-color:#d3dcfd;color:var(--accent-ink)}
+.tab[disabled]{opacity:.45;cursor:default}
+.md{font-size:14px;color:var(--ink);animation:fade .35s var(--ease) both}
+.md h1{font-size:19px;margin:6px 0 10px;font-weight:650} .md h2{font-size:15.5px;margin:20px 0 8px;font-weight:650} .md h3{font-size:14px;margin:16px 0 6px}
+.md p{margin:8px 0} .md ul,.md ol{margin:6px 0 8px;padding-left:22px} .md li{margin:3px 0}
+.md code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;background:#f2f4f8;border:1px solid var(--line-2);border-radius:5px;padding:1px 5px}
+.md pre{background:#f7f8fb;border:1px solid var(--line-2);border-radius:10px;padding:12px;overflow:auto} .md pre code{background:none;border:0;padding:0}
+.md table{width:100%;border-collapse:separate;border-spacing:0;margin:10px 0 14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.md th{background:#f5f7fb;text-align:left;font-weight:650;color:var(--ink-2);padding:8px 10px;border-bottom:1px solid var(--line)}
+.md td{padding:8px 10px;border-top:1px solid var(--line-2);vertical-align:top}
+.md tr:first-child td{border-top:0}
+.md .meta{display:inline-flex;gap:6px;align-items:center;padding:3px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-2);font-size:12px;color:var(--ink-2);margin:0 6px 6px 0}
+.md .cb{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--ink-4);vertical-align:-2px;margin-right:6px}
+.md .cb.on{background:var(--done);border-color:var(--done);box-shadow:inset 0 0 0 2px #fff}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);opacity:0;background:#1f2533;color:#fff;padding:11px 16px;border-radius:12px;box-shadow:var(--shadow-3);font-weight:550;transition:all .35s var(--ease);z-index:9;max-width:80vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:#8f2c25}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.skeleton{height:120px;border-radius:var(--r-lg);background:linear-gradient(90deg,#eef0f4,#f6f7fa,#eef0f4);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.foot{margin-top:28px;color:var(--ink-4);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 16 16"><path d="M4 11.5 8 4l4 7.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>AIDLC</div>
+    <div class="state-pill" id="pill"><span class="dot" id="pilldot"></span><span id="pilltext">Connecting</span></div>
+  </div>
+  <div id="banner"></div>
+  <section class="hero" id="hero"><div class="skeleton"></div></section>
+  <div id="needs"></div>
+  <section class="card" id="stepsCard"><h3><span id="stepsTitle">Steps</span><span class="aside" id="stepsAside"></span></h3><div id="steps"></div></section>
+  <div class="cols">
+    <section class="card"><h3>Live activity <span class="aside" id="actAside"></span></h3><div class="feed" id="feed"><div class="empty">Waiting for the first step to start.</div></div></section>
+    <section class="card"><h3>What each step wrote <span class="aside" id="docAside"></span></h3><div class="tabs" id="tabs"></div><div id="doc"><div class="empty">Choose a step to read what it wrote.</div></div></section>
+  </div>
+  <div class="foot">This page runs on your laptop and stops when the Claude Code window that started the work closes.</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ICON = {
+  check:'<svg viewBox="0 0 16 16"><path d="M3.5 8.5 6.5 11.5 12.5 4.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  wait:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8 5v3.2l2 1.3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>',
+  stale:'<svg viewBox="0 0 16 16"><path d="M12.5 6A4.7 4.7 0 1 0 12 10.5M12.5 3v3h-3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  tool:'<svg viewBox="0 0 16 16"><path d="M5 8h6M8 5l3 3-3 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  sub:'<svg viewBox="0 0 16 16"><circle cx="5" cy="5" r="2" fill="currentColor"/><circle cx="11" cy="11" r="2" fill="currentColor"/><path d="M5 7v2a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>',
+  note:'<svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  you:'<svg viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.5" fill="currentColor"/><path d="M3.5 13a4.5 4.5 0 0 1 9 0" fill="currentColor"/></svg>',
+  driver:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg>',
+};
+const WAITING = ["Waiting for answers","Waiting for approval","Waiting for go-back approval"];
+const CLASS = {"Done":"Done","Approved":"Approved","Running":"Running","Stale":"Stale","Draft":"Draft","Not started":"Notstarted"};
+const statusClass = (s) => WAITING.includes(s) ? "st-wait" : "st-" + (CLASS[s] || "Unknown");
+const pipClass = (s) => WAITING.includes(s) ? "wait" : (CLASS[s] || "Unknown");
+const nodeIcon = (s, i) => s === "Done" || s === "Approved" ? ICON.check : WAITING.includes(s) ? ICON.wait : s === "Stale" ? ICON.stale : String(i + 1);
+const shortStatus = (s) => ({"Waiting for answers":"Needs your answers","Waiting for approval":"Needs your approval","Waiting for go-back approval":"Needs your decision","Not started":"Not started"}[s] || s);
+
+let state = null, lastJson = "", selected = null, docCache = {}, lastEvent = 0, drafting = false, polling = false;
+
+/* ---------- markdown ---------- */
+function inline(s){
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>")
+       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+       .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>")
+       .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+       .replace(/(^|[\s(])(https?:\/\/[^\s<)|]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  return s;
+}
+function md(text){
+  const lines = String(text || "").replace(/\r/g,"").split("\n");
+  let out = [], i = 0, meta = [];
+  while (i < lines.length && /^(Status|Approval needed|Claimed by):/.test(lines[i])) { meta.push(lines[i]); i++; }
+  if (meta.length) out.push("<div>" + meta.map(m => { const [k, ...v] = m.split(":"); return `<span class="meta"><b>${esc(k)}</b> ${esc(v.join(":").trim())}</span>`; }).join("") + "</div>");
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) { let code = []; i++; while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]); i++; out.push("<pre><code>" + esc(code.join("\n")) + "</code></pre>"); continue; }
+    const h = l.match(/^(#{1,4})\s+(.*)/); if (h) { const n = Math.min(h[1].length, 3); out.push(`<h${n}>${inline(h[2])}</h${n}>`); i++; continue; }
+    if (/^\s*\|/.test(l)) {
+      let rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const head = cells(rows[0]); const body = rows.slice(1).filter(r => !/^\s*\|[\s:\-|]+\|\s*$/.test(r));
+      out.push("<table><thead><tr>" + head.map(c => `<th>${inline(c)}</th>`).join("") + "</tr></thead><tbody>" +
+        body.map(r => "<tr>" + cells(r).map(c => `<td>${inline(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table>");
+      continue;
+    }
+    if (/^\s*([-*]|\d+\.)\s+/.test(l)) {
+      const ordered = /^\s*\d+\./.test(l); let items = [];
+      while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*([-*]|\d+\.)\s+/, ""));
+      out.push(`<${ordered ? "ol" : "ul"}>` + items.map(t => { const cb = t.match(/^\[( |x|X)\]\s*(.*)/); return "<li>" + (cb ? `<span class="cb ${cb[1] !== " " ? "on" : ""}"></span>${inline(cb[2])}` : inline(t)) + "</li>"; }).join("") + `</${ordered ? "ol" : "ul"}>`);
+      continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    let para = []; while (i < lines.length && lines[i].trim() && !/^(#|\s*\||```|\s*([-*]|\d+\.)\s)/.test(lines[i])) para.push(lines[i++]);
+    out.push("<p>" + inline(para.join(" ")) + "</p>");
+  }
+  return out.join("");
+}
+
+/* ---------- api ---------- */
+async function api(path, body){
+  const sep = path.includes("?") ? "&" : "?";
+  const r = await fetch(path + sep + "t=" + encodeURIComponent(TOKEN), body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {cache:"no-store"});
+  const data = await r.json().catch(() => ({ok:false, message:"Unexpected reply."}));
+  return {status:r.status, data};
+}
+function toast(msg, bad){ const t = $("toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(t._h); t._h = setTimeout(() => t.className = "toast", 3600); }
+
+/* ---------- render ---------- */
+function elapsed(from){ const s = Math.max(0, (Date.now() - new Date(from).getTime()) / 1000); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60); return h ? `${h}h ${m}m` : m ? `${m}m` : `${Math.floor(s)}s`; }
+function allItems(s){ let out = []; for (const g of s.groups) { (g.items||[]).forEach(x => out.push(x)); (g.phases||[]).forEach(p => { p.units.forEach(u => u.steps.forEach(x => out.push(x))); out.push(p.check); }); } return out; }
+
+function renderTop(s){
+  const d = s.driver, needs = s.needs_you;
+  let cls = "", txt = "";
+  if (d.state === "running") { cls = "run"; txt = "Working"; }
+  else if (d.state === "waiting") { cls = needs ? "wait" : ""; txt = needs ? "Waiting on you" : "Waiting"; }
+  else if (d.state === "done") { cls = "done"; txt = "Done"; }
+  else if (d.state === "stopped") { cls = "stop"; txt = "Stopped"; }
+  else { txt = "Starting"; }
+  $("pilldot").className = "dot " + cls; $("pilltext").textContent = txt;
+  document.title = (needs ? "● Needs you · " : "") + s.task + " · AIDLC";
+  $("hero").innerHTML = `<h1>${esc(s.task)}</h1><p class="req">${esc(s.request || "")}</p>
+    <div class="chips"><span class="chip"><b>${s.kind === "project" ? "Project" : "Feature or bug fix"}</b></span>
+    <span class="chip">Branch <code>${esc(s.kind === "project" ? "feature/" + s.task + "-…" : "feature/" + s.task)}</code></span>
+    <span class="chip">Into <code>${esc(s.target)}</code></span>
+    <span class="chip">${esc(s.person.name)}</span>
+    <span class="chip">${d.state === "done" || d.state === "stopped" ? "Started" : "Running for"} <b>${d.state === "done" || d.state === "stopped" ? new Date(d.started).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) : elapsed(d.started)}</b></span></div>`;
+  let b = "";
+  if (d.state === "done") b = `<div class="banner done"><div>${ICON.check}</div><div><div class="t">All steps are done</div>${esc(d.message || "")}${prLink(s)}</div></div>`;
+  if (d.state === "stopped") b = `<div class="banner stop"><div>!</div><div><div class="t">The work stopped</div>${esc(d.message || "")}</div></div>`;
+  $("banner").innerHTML = b;
+}
+function prLink(s){ const pr = docCache["pr"]; return pr ? ` <a href="${esc(pr)}" target="_blank" rel="noopener">Open the PR</a>` : ""; }
+
+function renderNeeds(s){
+  const n = s.needs_you, box = $("needs");
+  if (!n) { box.innerHTML = ""; box.dataset.key = ""; drafting = false; return; }
+  const key = n.path + "|" + n.status + "|" + (n.questions || []).length + "|" + n.mine;
+  if (box.dataset.key === key) return;            // keep what the person is typing
+  box.dataset.key = key;
+  const title = {answers:"Questions for you", approval:"Your approval is needed", goback:"A step proposes going back"}[n.kind];
+  const sub = {answers:`${esc(n.label)} needs your answers before it can carry on.`,
+               approval:`${esc(n.label)} is ready. Read it, then approve or say what should change.`,
+               goback:`${esc(n.label)} found a problem whose cause is in an earlier step.`}[n.kind];
+  if (!n.mine) {
+    box.innerHTML = `<section class="needs"><div class="head"><div><span class="eyebrow"><span class="dot wait"></span>Waiting on someone else</span>
+      <h2>${esc(n.label)} waits on ${esc((n.who || []).join(", ") || "another person")}</h2>
+      <p class="sub">They answer or approve in their own Claude Code session (/aidlc:start or /aidlc:approve). The work carries on once they do.</p></div></div></section>`;
+    return;
+  }
+  let body = "";
+  if (n.note) body += `<div class="note">${md(n.note)}</div>`;
+  if (n.kind === "answers") {
+    if (n.questions.length) {
+      body += n.questions.map(q => {
+        const c = q.cells, keys = Object.keys(c);
+        const num = c["#"] || "", qt = c[keys.find(k => /question/i.test(k))] || "", opt = c[keys.find(k => /option|suggest/i.test(k))] || "";
+        return `<div class="q"><div class="qn"><span class="num">${esc(num)}</span><span class="qt">${inline(qt)}</span></div>
+          ${opt ? `<div class="opt">${inline(opt)}</div>` : '<div style="height:10px"></div>'}
+          <textarea data-key="${esc(q.key)}" placeholder="Your answer"></textarea></div>`;
+      }).join("");
+    } else {
+      body += `<div class="q"><textarea id="freeText" placeholder="Your answer"></textarea></div>`;
+    }
+    body += `<div class="actions"><button class="btn primary" id="sendAnswers">Send answers</button></div>`;
+  } else {
+    body += `<details class="doc" open><summary>Read ${esc(n.label)}</summary><div class="md">${md(n.text)}</div></details>
+      <div class="reason" id="reasonBox"><textarea id="reasonText" placeholder="What should change, and why?"></textarea></div>
+      <div class="actions"><button class="btn ghost" id="noBtn">${n.kind === "goback" ? "Don't go back" : "Not yet"}</button>
+      <button class="btn good" id="yesBtn">${n.kind === "goback" ? "Approve going back" : "Approve"}</button></div>`;
+  }
+  box.innerHTML = `<section class="needs"><div class="head"><div><span class="eyebrow"><span class="dot wait"></span>Waiting on you</span>
+    <h2>${title}</h2><p class="sub">${sub}</p></div></div>${body}</section>`;
+  box.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => drafting = true));
+  if ($("sendAnswers")) $("sendAnswers").onclick = async (e) => {
+    const answers = {}; box.querySelectorAll("textarea[data-key]").forEach(t => { if (t.value.trim()) answers[t.dataset.key] = t.value.trim(); });
+    const text = $("freeText") ? $("freeText").value.trim() : "";
+    await act(e.target, {action:"answer", branch:n.branch, path:n.path, answers, text});
+  };
+  if ($("yesBtn")) $("yesBtn").onclick = (e) => act(e.target, {action:"approve", branch:n.branch, path:n.path});
+  if ($("noBtn")) $("noBtn").onclick = async (e) => {
+    const box2 = $("reasonBox");
+    if (!box2.classList.contains("open")) { box2.classList.add("open"); $("reasonText").focus(); e.target.textContent = "Send"; return; }
+    await act(e.target, {action:"decline", branch:n.branch, path:n.path, text:$("reasonText").value});
+  };
+}
+async function act(btn, body){
+  btn.disabled = true; const label = btn.textContent; btn.textContent = "Saving…";
+  try {
+    const {status, data} = await api("/api/act", body);
+    toast(data.message || (data.ok ? "Saved." : "Something went wrong."), !data.ok);
+    if (data.ok) { drafting = false; $("needs").dataset.key = ""; await poll(true); }
+  } catch (e) { toast("The driver isn't reachable.", true); }
+  btn.disabled = false; btn.textContent = label;
+}
+
+function renderSteps(s){
+  const box = $("steps");
+  if (s.kind !== "project") {
+    const items = s.groups[0].items;
+    $("stepsTitle").textContent = "Steps"; $("stepsAside").textContent = `${items.filter(x => x.status === "Done").length} of ${items.length} done`;
+    box.innerHTML = `<div class="stepper" style="--n:${items.length}">` + items.map((x, i) => {
+      const prevDone = i > 0 && items[i-1].status === "Done";
+      return `<div class="step ${statusClass(x.status)} ${x.status === "Done" ? "done" : ""} ${prevDone && x.status !== "Not started" ? "after-done" : ""} ${selected && selected.path === x.path ? "sel" : ""}" data-path="${esc(x.path)}" data-branch="${esc(x.branch)}" data-label="${esc(x.label)}">
+        <div class="bar"><i></i></div><div class="node">${nodeIcon(x.status, i)}</div><div class="lbl">${esc(x.label)}</div><div class="sts">${esc(shortStatus(x.status))}</div></div>`;
+    }).join("") + "</div>";
+  } else {
+    $("stepsTitle").textContent = "Work"; $("stepsAside").textContent = "";
+    box.innerHTML = '<div class="mods">' + s.groups.map(g => {
+      const items = (g.items || []).map(x => `<span class="mini ${statusClass(x.status)}" data-path="${esc(x.path)}" data-branch="${esc(x.branch)}" data-label="${esc(x.label)}"><span class="pip ${pipClass(x.status)}"></span>${esc(x.label)} · ${esc(shortStatus(x.status))}</span>`).join(" ");
+      const phases = (g.phases || []).map(p => `<div class="phase"><span class="pt">${esc(p.title)}</span>` +
+        p.units.map(u => `<span class="unit" title="${esc(u.behavior)}" data-path="${esc(u.steps.find(x => x.status !== "Done")?.path || u.steps[0].path)}" data-branch="${esc(u.steps[0].branch)}" data-label="${esc(u.id)}">${esc(u.id)}<span class="pips">${u.steps.map(x => `<span class="pip ${pipClass(x.status)}" title="${esc(x.label + ": " + x.status)}"></span>`).join("")}</span></span>`).join("") +
+        ` <span class="mini" data-path="${esc(p.check.path)}" data-branch="${esc(p.check.branch)}" data-label="Phase check"><span class="pip ${pipClass(p.check.status)}"></span>Phase check</span></div>`).join("");
+      return `<div class="mod"><div class="mh"><span class="mt">${esc(g.title)}</span>${g.owner ? `<span class="chip">${esc(g.owner)}</span>` : ""}</div>${phases}<div style="margin-top:8px">${items}</div></div>`;
+    }).join("") + "</div>";
+  }
+  box.querySelectorAll("[data-path]").forEach(el => el.onclick = () => { selected = {path: el.dataset.path, branch: el.dataset.branch, label: el.dataset.label}; renderSteps(state); renderTabs(state); loadDoc(); });
+}
+
+function renderTabs(s){
+  const items = s.kind === "project" ? allItems(s).filter(x => x.status !== "Not started") : s.groups[0].items;
+  if (!selected) { const live = items.find(x => x.status === "Running") || [...items].reverse().find(x => x.status !== "Not started"); if (live) selected = {path: live.path, branch: live.branch, label: live.label}; }
+  $("tabs").innerHTML = items.slice(-12).map(x => `<button class="tab ${selected && selected.path === x.path ? "on" : ""}" ${x.status === "Not started" ? "disabled" : ""} data-path="${esc(x.path)}" data-branch="${esc(x.branch)}" data-label="${esc(x.label)}">${esc(x.label)}</button>`).join("");
+  $("tabs").querySelectorAll(".tab").forEach(el => el.onclick = () => { if (el.disabled) return; selected = {path: el.dataset.path, branch: el.dataset.branch, label: el.dataset.label}; renderTabs(state); renderSteps(state); loadDoc(); });
+}
+async function loadDoc(){
+  if (!selected) return;
+  const sel = selected;
+  try {
+    const {data} = await api(`/api/file?branch=${encodeURIComponent(sel.branch)}&path=${encodeURIComponent(sel.path)}`);
+    if (sel !== selected) return;
+    const html = data.text ? md(data.text) : '<div class="empty">Nothing written yet.</div>';
+    const doc = $("doc"); if (doc._html !== html) { doc.innerHTML = `<div class="md">${html}</div>`; doc._html = html; }
+    $("docAside").textContent = sel.path.split("/").slice(-1)[0];
+    if (/pr(-final|-units)?\.md$/.test(sel.path)) { const m = (data.text || "").match(/\| PR link \|\s*(https?:\S+)\s*\|/); if (m) docCache["pr"] = m[1]; }
+  } catch (e) {}
+}
+
+function renderFeed(s){
+  const ev = s.activity || [];
+  $("actAside").textContent = ev.length ? `${ev.length} events` : "";
+  if (!ev.length) return;
+  const feed = $("feed");
+  const newest = ev[ev.length - 1].n || 0;
+  if (newest < lastEvent) { feed.innerHTML = ""; lastEvent = 0; }  // the driver restarted
+  const fresh = ev.filter(e => (e.n || 0) > lastEvent);
+  if (!fresh.length) return;
+  lastEvent = newest;
+  const html = fresh.reverse().map(e => {
+    const t = new Date(e.t); const tg = t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    const stage = e.stage ? e.stage.split("/").slice(-1)[0].replace(".md","") : "";
+    const kind = ["tool","sub","note","result","you","driver","output"].includes(e.kind) ? e.kind : "driver";
+    return `<div class="ev k-${kind}"><span class="ic">${ICON[kind] || ICON.driver}</span><div class="tx">${kind === "sub" ? '<span class="who">sub-agent</span>' : ""}${esc(e.text)}</div><span class="tg">${esc(stage ? stage + " · " : "")}${tg}</span></div>`;
+  }).join("");
+  if (feed.querySelector(".empty")) feed.innerHTML = "";
+  feed.insertAdjacentHTML("afterbegin", html);
+  while (feed.children.length > 400) feed.lastElementChild.remove();
+}
+
+/* ---------- loop ---------- */
+let failures = 0;
+async function poll(force){
+  if (polling && !force) return;
+  polling = true;
+  try {
+    const {status, data} = await api("/api/state");
+    if (status !== 200) throw new Error("bad");
+    failures = 0; $("banner").querySelector(".lost")?.remove();
+    const json = JSON.stringify(data);
+    if (!force && json === lastJson) { renderTopTime(data); return; }
+    lastJson = json; state = data;
+    renderTop(data); renderNeeds(data); renderSteps(data); renderTabs(data); renderFeed(data); loadDoc();
+  } catch (e) {
+    failures++;
+    if (failures >= 2 && !$("banner").querySelector(".lost")) {
+      $("banner").innerHTML = `<div class="banner lost"><div>${ICON.wait}</div><div><div class="t">Can't reach the driver</div>The Claude Code window that started this work may have closed, which stops the work. Run /aidlc:start there to continue.</div></div>`;
+      $("pilldot").className = "dot stop"; $("pilltext").textContent = "Not running";
+    }
+  } finally { polling = false; }
+}
+function renderTopTime(s){ if (s.driver.state === "done" || s.driver.state === "stopped") return; const b = $("hero").querySelector(".chip:last-child b"); if (b) b.textContent = elapsed(s.driver.started); }
+poll(true); setInterval(poll, 2000);
+</script>
+</body>
+</html>
