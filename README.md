@@ -11,7 +11,7 @@ This repository holds the AIDLC plugin, in `plugin/aidlc`. See its [README](plug
 You need read access to this repository on GitHub. In Claude Code, run once:
 
 ```
-/plugin marketplace add devx-commerce/rnd-aidlc
+/plugin marketplace add anvesx/aidlc
 /plugin install aidlc@devx-aidlc
 ```
 

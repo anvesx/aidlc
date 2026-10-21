@@ -36,7 +36,7 @@ Every piece of work runs one loop: **Clarify, Plan, Build, Check, Record.**
 
 ## Install
 
-**Claude Code:** see the repository README (`/plugin marketplace add devx-commerce/rnd-aidlc`, then `/plugin install aidlc@devx-aidlc`). To try a local copy: `claude --plugin-dir <path to this folder>`.
+**Claude Code:** see the repository README (`/plugin marketplace add anvesx/aidlc`, then `/plugin install aidlc@devx-aidlc`). To try a local copy: `claude --plugin-dir <path to this folder>`.
 
 **Cowork:** upload a zip of this folder under Customize, then Plugins.
 
